@@ -89,8 +89,8 @@ python bot.py
 python-telegram-bot>=20.0
 python-dotenv
 APScheduler
+nest_asyncio  # <-- Добавили сюда
 ```
-
 ---
 
 ### 🛡 Возможные ошибки и решения
