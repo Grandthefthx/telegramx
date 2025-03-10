@@ -15,9 +15,8 @@ async def start(update: Update, context: CallbackContext):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO users (telegram_id, username, first_name, last_name, language_code)
+        INSERT OR IGNORE INTO users (telegram_id, username, first_name, last_name, language_code)
         VALUES (?, ?, ?, ?, ?)
-        ON CONFLICT(telegram_id) DO NOTHING
     """, (telegram_id, username, first_name, last_name, language_code))
     conn.commit()
     conn.close()

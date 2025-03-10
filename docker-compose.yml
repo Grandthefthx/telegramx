@@ -1,0 +1,10 @@
+services:
+  telegram-bot:
+    build: .
+    container_name: telegramx_bot
+    volumes:
+      - ./data:/app/data   # Монтируем статьи
+      - ./telegram_bot.db:/app/telegram_bot.db  # Монтируем БД
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}  # Токен из .env
+    restart: always
