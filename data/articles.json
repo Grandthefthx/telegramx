@@ -1,0 +1,5 @@
+[
+    {"title": "Статья 1", "content": "Это первая статья.", "send_after_days": 0},
+    {"title": "Статья 2", "content": "Это вторая статья.", "send_after_days": 2},
+    {"title": "Статья 3", "content": "Это третья статья.", "send_after_days": 4}
+]
