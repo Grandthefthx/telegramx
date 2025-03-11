@@ -2,7 +2,14 @@ import asyncio
 import sys
 from config import TOKEN
 from handlers.start_handler import start_conversation
-from telegram.ext import ApplicationBuilder
+from handlers.admin_handler import admin_panel, create_story, list_stories, receive_story, receive_frequency
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    filters,
+    ConversationHandler
+)
 
 # ✅ Windows фикс: ProactorEventLoop
 if sys.platform == "win32":
@@ -10,13 +17,33 @@ if sys.platform == "win32":
     nest_asyncio.apply()
     asyncio.set_event_loop(asyncio.ProactorEventLoop())
 
+# ✅ Определяем состояния для диалога создания сториз
+ASK_STORY, ASK_FREQUENCY = range(2)
+
 async def main():
     """Запуск бота"""
     app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(start_conversation)  # Добавляем диалог
+
+    # ✅ Команда входа в админ-панель
+    app.add_handler(CommandHandler("admin", admin_panel))
+
+    # ✅ Команда просмотра сториз
+    app.add_handler(CommandHandler("list_stories", list_stories))
+
+    # ✅ Диалог для создания сториз
+    conv_handler = ConversationHandler(
+        entry_points=[MessageHandler(filters.TEXT & filters.Regex("Создать стори"), create_story)],
+        states={
+            ASK_STORY: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_story)],
+            ASK_FREQUENCY: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_frequency)],
+        },
+        fallbacks=[],
+    )
+
+    app.add_handler(conv_handler)
 
     print("Бот запущен! 🚀")
-    
+
     try:
         await app.run_polling()
     except asyncio.CancelledError:
