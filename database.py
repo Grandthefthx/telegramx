@@ -1,73 +1,62 @@
-import json
 import sqlite3
+import os
 
-DB_PATH = "telegram_bot.db"
+DB_PATH = os.path.join(os.getcwd(), "telegram_bot.db")  # Гарантированно создаст в текущей папке
 
 def get_connection():
+    """Создаёт и возвращает подключение к базе данных"""
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row  # Чтобы работать с именами полей
+    conn.row_factory = sqlite3.Row  # Читаем строки как словарь
     return conn
 
 def init_db():
+    """Создаёт таблицу пользователей"""
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Создаем таблицу users (без удаления)
+    cursor.execute("""DROP TABLE IF EXISTS users;""")  # Если тестируешь — пересоздаём
+    conn.commit()
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         telegram_id INTEGER NOT NULL UNIQUE,
-        username TEXT,
-        first_name TEXT,
-        last_name TEXT,
-        language_code TEXT,
-        subscription_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_message_date DATETIME,
-        interaction_count INTEGER DEFAULT 0,
-        device_type TEXT,
-        time_zone TEXT,
-        ip_address TEXT
-    );
-    """)
-
-    # Создаем таблицу статей (без удаления)
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS articles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        send_after_days INTEGER NOT NULL
+        name TEXT
     );
     """)
 
     conn.commit()
     conn.close()
-    print("Database initialized successfully!")
+    print("✅ База данных инициализирована")
 
-# Загружаем статьи из JSON в БД (без дубликатов)
-def load_articles():
+def add_user(telegram_id, name):
+    """Добавляет пользователя в БД или обновляет имя"""
     conn = get_connection()
     cursor = conn.cursor()
+    
+    cursor.execute("SELECT name FROM users WHERE telegram_id = ?", (telegram_id,))
+    user = cursor.fetchone()
 
-    # Загружаем статьи из JSON
-    with open('data/articles.json', 'r', encoding='utf-8') as f:
-        articles = json.load(f)
-
-    # Добавляем статьи, если их еще нет
-    for article in articles:
-        cursor.execute("""
-            INSERT INTO articles (title, content, send_after_days)
-            SELECT ?, ?, ? WHERE NOT EXISTS (
-                SELECT 1 FROM articles WHERE title = ? AND content = ?
-            )
-        """, (article['title'], article['content'], article['send_after_days'],
-              article['title'], article['content']))
+    if user:
+        cursor.execute("UPDATE users SET name = ? WHERE telegram_id = ?", (name, telegram_id))
+    else:
+        cursor.execute("INSERT INTO users (telegram_id, name) VALUES (?, ?)", (telegram_id, name))
 
     conn.commit()
     conn.close()
-    print("Articles loaded successfully!")
 
-# Выполняем инициализацию базы при запуске скрипта
+def get_user_name(telegram_id):
+    """Получает имя пользователя по его Telegram ID"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT name FROM users WHERE telegram_id = ?", (telegram_id,))
+    user = cursor.fetchone()
+    
+    conn.close()
+    return user["name"] if user else None
+
+# ✅ Теперь при запуске database.py создаётся БД
 if __name__ == "__main__":
-    init_db()        # Создаем таблицы (без удаления)
-    load_articles()  # Загружаем статьи без дублирования
+    print(f"📂 База создаётся в: {DB_PATH}")
+    init_db()
